@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "guardbench"
+version = "0.1.0"
+description = "Regression benchmark for LLM guardrails: prompt injection, indirect injection, tool exfiltration and data leakage, mapped to MITRE ATLAS."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Atul Chaudhari" }]
+keywords = ["llm", "security", "guardrails", "prompt-injection", "mitre-atlas", "ai-security"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Security",
+]
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/atulkrchaudhari/llm-guardrail-benchmark"
+Issues = "https://github.com/atulkrchaudhari/llm-guardrail-benchmark/issues"
+
+[project.optional-dependencies]
+http = ["requests>=2.31"]
+presidio = ["presidio-analyzer>=2.2"]
+llm-guard = ["llm-guard>=0.3"]
+bedrock = ["boto3>=1.34"]
+examples = ["scikit-learn>=1.3", "requests>=2.31"]
+dev = ["pytest>=8", "ruff>=0.5"]
+
+[project.scripts]
+guardbench = "guardbench.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+guardbench = ["*.jsonl"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
