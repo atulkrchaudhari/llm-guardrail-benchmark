@@ -5,6 +5,7 @@
 - Suite grows to 47 cases: agent instruction file injection, tool description poisoning, memory poisoning, a Hindi direct injection, and two more benign look-alikes.
 - `http-guardrail` adapter: `GUARDRAIL_TEXT_FIELD` sets the request field that carries the text.
 - CI false positive gate set to the measured baseline of 25%.
+- First published results for LLM Guard 0.3.16, run by the new `Third-party guardrails` workflow.
 
 ## 0.1.0
 
