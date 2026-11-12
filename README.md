@@ -16,6 +16,7 @@ It answers the question a security review will ask: when the policy changed last
 pip install -e .                 # core, no dependencies
 pip install -e ".[presidio]"     # add Microsoft Presidio
 pip install -e ".[llm-guard]"    # add Protect AI LLM Guard
+pip install -e ".[prompt-guard]" # add Meta Llama Prompt Guard 2 (gated model)
 pip install -e ".[bedrock]"      # add Amazon Bedrock Guardrails
 pip install -e ".[http]"         # test a guardrail behind an HTTP endpoint
 ```
@@ -98,6 +99,7 @@ Amazon Bedrock Guardrails has an adapter. Its results are not published yet.
 | `layered-guard` | Reference implementation: input restoration, untrusted-context rule, destination allowlist | Nothing |
 | `presidio-pii` | Microsoft Presidio on output | `.[presidio]` and a spaCy model |
 | `llm-guard` | Protect AI LLM Guard: prompt-injection classifier on input and context, sensitive-data scanner on output | `.[llm-guard]` |
+| `prompt-guard-2` | Meta Llama Prompt Guard 2 (86M): prompt-attack classifier on input and context. Not applied to output | `.[prompt-guard]`, `HF_TOKEN` with access to the gated model |
 | `bedrock-guardrail` | Amazon Bedrock Guardrails through `ApplyGuardrail` | `BEDROCK_GUARDRAIL_ID`, AWS credentials |
 | `http-guardrail` | Any guardrail service | `GUARDRAIL_URL` |
 

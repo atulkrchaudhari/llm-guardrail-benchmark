@@ -6,6 +6,7 @@
 - `http-guardrail` adapter: `GUARDRAIL_TEXT_FIELD` sets the request field that carries the text.
 - CI false positive gate set to the measured baseline of 25%.
 - First published results for LLM Guard 0.3.16, run by the new `Third-party guardrails` workflow.
+- `prompt-guard-2` adapter for Meta's Llama Prompt Guard 2, with a `Prompt Guard 2` workflow that measures it at thresholds 0.5 and 0.9. The model is gated, so the workflow needs an `HF_TOKEN` secret. Results follow once the run completes.
 
 ## 0.1.0
 
