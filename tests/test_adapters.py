@@ -60,3 +60,48 @@ def test_http_adapter_fails_closed(monkeypatch):
     assert adapter.setup() is None
     verdict = adapter.check("hello", "input")
     assert verdict.blocked and verdict.reason.startswith("fail closed")
+
+
+# ------------------------------------------------------------ prompt-guard-2
+def _prompt_guard(score: float, threshold: float = 0.5):
+    from guardbench.adapters import PromptGuard2
+
+    adapter = PromptGuard2()
+    adapter._threshold = threshold
+    adapter.score = lambda text: score  # no model needed for the decision rule
+    return adapter
+
+
+def test_prompt_guard_is_registered():
+    assert "prompt-guard-2" in REGISTRY
+
+
+def test_prompt_guard_blocks_at_or_above_threshold():
+    assert _prompt_guard(0.50).check("x", "input").blocked
+    assert _prompt_guard(0.97).check("x", "context").blocked
+    assert not _prompt_guard(0.49).check("x", "input").blocked
+    assert not _prompt_guard(0.80, threshold=0.9).check("x", "input").blocked
+
+
+def test_prompt_guard_never_blocks_output():
+    verdict = _prompt_guard(1.0).check("card 4111 1111 1111 1111", "output")
+    assert not verdict.blocked
+    assert "not applicable" in verdict.reason
+
+
+def test_prompt_guard_rejects_bad_threshold(monkeypatch):
+    from guardbench.adapters import PromptGuard2
+
+    for bad in ("high", "0", "1.5"):
+        monkeypatch.setenv("PROMPT_GUARD_THRESHOLD", bad)
+        assert "PROMPT_GUARD_THRESHOLD" in PromptGuard2().setup()
+
+
+def test_prompt_guard_reports_missing_dependency(monkeypatch):
+    import sys
+
+    from guardbench.adapters import PromptGuard2
+
+    monkeypatch.delenv("PROMPT_GUARD_THRESHOLD", raising=False)
+    monkeypatch.setitem(sys.modules, "transformers", None)
+    assert "not usable" in PromptGuard2().setup()
