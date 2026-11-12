@@ -1,0 +1,39 @@
+name: Third-party guardrails
+
+# Runs guardrails that need model downloads. Started by hand, because the
+# models are large and the results only change when a version changes.
+on:
+  workflow_dispatch:
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install
+        run: |
+          pip install -e ".[llm-guard,presidio]"
+          python -m spacy download en_core_web_lg
+      - name: Record versions
+        run: pip list 2>/dev/null | grep -iE "^(llm-guard|presidio-analyzer|transformers|torch|spacy) " | tee versions.txt
+      - name: Run benchmark (Markdown)
+        run: guardbench run --adapters pattern-baseline,layered-guard,presidio-pii,llm-guard --out results.md
+      - name: Run benchmark (JSON)
+        run: guardbench run --adapters pattern-baseline,layered-guard,presidio-pii,llm-guard --format json --out results.json
+      - name: Summary
+        run: |
+          cat results.md >> "$GITHUB_STEP_SUMMARY"
+          printf '\n## Versions\n\n```\n' >> "$GITHUB_STEP_SUMMARY"
+          cat versions.txt >> "$GITHUB_STEP_SUMMARY"
+          printf '```\n' >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: third-party-results
+          path: |
+            results.md
+            results.json
+            versions.txt
