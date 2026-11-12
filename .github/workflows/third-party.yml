@@ -19,7 +19,7 @@ jobs:
           pip install -e ".[llm-guard,presidio]"
           python -m spacy download en_core_web_lg
       - name: Record versions
-        run: pip list 2>/dev/null | grep -iE "^(llm-guard|presidio-analyzer|transformers|torch|spacy) " | tee versions.txt
+        run: pip list 2>/dev/null | grep -iE "^(llm[-_]guard|presidio[-_]analyzer|transformers|torch|spacy) " | tee versions.txt
       - name: Run benchmark (Markdown)
         run: guardbench run --adapters pattern-baseline,layered-guard,presidio-pii,llm-guard --out results.md
       - name: Run benchmark (JSON)
