@@ -216,8 +216,9 @@ class HTTPGuardrail(Adapter):
     """Any guardrail service behind an HTTP endpoint.
 
     Environment: GUARDRAIL_URL, GUARDRAIL_KEY (optional bearer token),
-    GUARDRAIL_BLOCK_FIELD (response field that is true on block, default
-    ``blocked``), GUARDRAIL_TIMEOUT (seconds, default 5).
+    GUARDRAIL_TEXT_FIELD (request field that carries the text, default
+    ``text``), GUARDRAIL_BLOCK_FIELD (response field that is true on block,
+    default ``blocked``), GUARDRAIL_TIMEOUT (seconds, default 5).
 
     A timeout or an error is a block. A guardrail that cannot be reached
     must fail closed, and the benchmark scores it that way.
@@ -230,6 +231,7 @@ class HTTPGuardrail(Adapter):
         if not self._url:
             return "GUARDRAIL_URL not set"
         self._key = os.getenv("GUARDRAIL_KEY", "")
+        self._text_field = os.getenv("GUARDRAIL_TEXT_FIELD", "text")
         self._block_field = os.getenv("GUARDRAIL_BLOCK_FIELD", "blocked")
         self._timeout = float(os.getenv("GUARDRAIL_TIMEOUT", "5"))
         return None
@@ -240,7 +242,7 @@ class HTTPGuardrail(Adapter):
         headers = {"Authorization": f"Bearer {self._key}"} if self._key else {}
         try:
             response = requests.post(
-                self._url, json={"text": text, "field": field}, headers=headers, timeout=self._timeout
+                self._url, json={self._text_field: text, "field": field}, headers=headers, timeout=self._timeout
             )
             response.raise_for_status()
             return Verdict(bool(response.json().get(self._block_field)), "remote decision")
