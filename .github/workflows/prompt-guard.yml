@@ -1,0 +1,68 @@
+name: Prompt Guard 2
+
+# Runs Meta's Llama Prompt Guard 2 on the suite. Started by hand.
+# The model is gated: the repository secret HF_TOKEN must belong to a
+# Hugging Face account that has accepted Meta's licence for it.
+on:
+  workflow_dispatch:
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      HF_TOKEN: ${{ secrets.HF_TOKEN }}
+      ADAPTERS: pattern-baseline,layered-guard,prompt-guard-2
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install
+        run: |
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -e ".[prompt-guard]"
+      - name: Check model access
+        run: |
+          python - <<'PY'
+          import os, sys
+          from huggingface_hub import model_info
+          from huggingface_hub.utils import GatedRepoError, HfHubHTTPError
+          if not os.environ.get("HF_TOKEN"):
+              sys.exit("HF_TOKEN secret is not set")
+          try:
+              info = model_info("meta-llama/Llama-Prompt-Guard-2-86M", files_metadata=False)
+              print("model revision", info.sha)
+          except GatedRepoError:
+              sys.exit("Access to the gated model has not been granted to this account yet")
+          except HfHubHTTPError as exc:
+              sys.exit(f"Hugging Face returned {exc.response.status_code}")
+          PY
+      - name: Record versions
+        run: pip list 2>/dev/null | grep -iE "^(transformers|torch|huggingface[-_]hub) " | tee versions.txt
+      - name: Run at threshold 0.5
+        run: |
+          guardbench run --adapters "$ADAPTERS" --out results-0.5.md
+          guardbench run --adapters "$ADAPTERS" --format json --out results-0.5.json
+      - name: Run at threshold 0.9 (LlamaFirewall default)
+        env:
+          PROMPT_GUARD_THRESHOLD: "0.9"
+        run: |
+          guardbench run --adapters "$ADAPTERS" --out results-0.9.md
+          guardbench run --adapters "$ADAPTERS" --format json --out results-0.9.json
+      - name: Summary
+        run: |
+          {
+            printf '## Threshold 0.5\n\n'; cat results-0.5.md
+            printf '\n## Threshold 0.9\n\n'; cat results-0.9.md
+            printf '\n## Versions\n\n```\n'; cat versions.txt; printf '```\n'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Fail if Prompt Guard did not run
+        run: grep -q "prompt-guard-2" results-0.5.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: prompt-guard-results
+          path: |
+            results-*.md
+            results-*.json
+            versions.txt
