@@ -180,6 +180,56 @@ class LLMGuard(Adapter):
         return Verdict(not valid, f"prompt injection score {score:.2f}")
 
 
+class PromptGuard2(Adapter):
+    """Meta's Llama Prompt Guard 2: a trained prompt-attack classifier.
+
+    The model is gated on Hugging Face, so the account behind ``HF_TOKEN``
+    must have accepted Meta's licence. The score is the probability of the
+    model's last class (malicious), the same value LlamaFirewall reads.
+    The text is passed to the model as is; LlamaFirewall's extra
+    preprocessing step is not applied. The classifier is built for inputs
+    and untrusted context, so ``output`` text is never blocked.
+
+    Environment: ``PROMPT_GUARD_MODEL`` (default the 86M model) and
+    ``PROMPT_GUARD_THRESHOLD`` (default 0.5; LlamaFirewall ships 0.9).
+    """
+
+    name = "prompt-guard-2"
+    default_model: ClassVar[str] = "meta-llama/Llama-Prompt-Guard-2-86M"
+
+    def setup(self) -> str | None:
+        try:
+            self._threshold = float(os.environ.get("PROMPT_GUARD_THRESHOLD", "0.5"))
+        except ValueError:
+            return "PROMPT_GUARD_THRESHOLD is not a number"
+        if not 0.0 < self._threshold <= 1.0:
+            return "PROMPT_GUARD_THRESHOLD must be in (0, 1]"
+        try:
+            import torch
+            from transformers import AutoModelForSequenceClassification, AutoTokenizer
+
+            model_id = os.environ.get("PROMPT_GUARD_MODEL", self.default_model)
+            self._torch = torch
+            self._tokenizer = AutoTokenizer.from_pretrained(model_id)
+            self._model = AutoModelForSequenceClassification.from_pretrained(model_id)
+            self._model.eval()
+        except Exception as exc:  # missing package, no licence, no network
+            return f"prompt-guard-2 not usable ({type(exc).__name__})"
+        return None
+
+    def score(self, text: str) -> float:
+        inputs = self._tokenizer(text, return_tensors="pt", truncation=True, max_length=512)
+        with self._torch.no_grad():
+            logits = self._model(**inputs).logits
+        return float(self._torch.softmax(logits, dim=-1)[0, -1])
+
+    def check(self, text: str, field: Field) -> Verdict:
+        if field == "output":
+            return Verdict(False, "not applicable to output")
+        score = self.score(text)
+        return Verdict(score >= self._threshold, f"malicious score {score:.2f}")
+
+
 class BedrockGuardrail(Adapter):
     """Amazon Bedrock Guardrails through the ApplyGuardrail API.
 
@@ -251,5 +301,13 @@ class HTTPGuardrail(Adapter):
 
 
 REGISTRY: dict[str, type[Adapter]] = {
-    cls.name: cls for cls in (PatternBaseline, LayeredGuard, PresidioPII, LLMGuard, BedrockGuardrail, HTTPGuardrail)
+    cls.name: cls for cls in (
+        PatternBaseline,
+        LayeredGuard,
+        PresidioPII,
+        LLMGuard,
+        PromptGuard2,
+        BedrockGuardrail,
+        HTTPGuardrail,
+    )
 }
