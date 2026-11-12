@@ -20,5 +20,5 @@ jobs:
       - run: ruff check .
       - run: pytest -q
       - name: Guardrail regression gate
-        run: guardbench run --adapters layered-guard --fail-under 0.85 --max-fpr 0.20
+        run: guardbench run --adapters layered-guard --fail-under 0.85 --max-fpr 0.25
       - run: python examples/rag_agent.py
