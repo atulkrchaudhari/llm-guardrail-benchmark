@@ -9,7 +9,7 @@ description = "Regression benchmark for LLM guardrails: prompt injection, indire
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
-authors = [{ name = "Atul Chaudhari" }]
+authors = [{ name = "Atul Chaudhari", email = "atul@aipromptshield.com" }]
 keywords = ["llm", "security", "guardrails", "prompt-injection", "mitre-atlas", "ai-security"]
 classifiers = [
     "Development Status :: 3 - Alpha",
