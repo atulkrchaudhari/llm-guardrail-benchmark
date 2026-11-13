@@ -230,6 +230,42 @@ class PromptGuard2(Adapter):
         return Verdict(score >= self._threshold, f"malicious score {score:.2f}")
 
 
+class LlamaFirewallStatic(Adapter):
+    """Meta's LlamaFirewall, limited to the two scanners that need no model.
+
+    ``RegexScanner`` matches LlamaFirewall's default patterns (a prompt
+    injection phrase, email address, phone number, credit card, social
+    security number). ``HiddenASCIIScanner`` flags Unicode tag characters.
+    A block decision from either scanner is a block. Both are applied to
+    every field. PromptGuard, AlignmentCheck and CodeShield are not run.
+    """
+
+    name = "llamafirewall-static"
+
+    def setup(self) -> str | None:
+        try:
+            import asyncio
+
+            from llamafirewall import ScanDecision, UserMessage
+            from llamafirewall.scanners.hidden_ascii_scanner import HiddenASCIIScanner
+            from llamafirewall.scanners.regex_scanner import RegexScanner
+
+            self._run = asyncio.run
+            self._message, self._block = UserMessage, ScanDecision.BLOCK
+            self._scanners = [RegexScanner(), HiddenASCIIScanner()]
+        except Exception as exc:
+            return f"llamafirewall not usable ({type(exc).__name__})"
+        return None
+
+    def check(self, text: str, field: Field) -> Verdict:
+        message = self._message(content=text)
+        for scanner in self._scanners:
+            result = self._run(scanner.scan(message))
+            if result.decision == self._block:
+                return Verdict(True, result.reason)
+        return Verdict(False)
+
+
 class BedrockGuardrail(Adapter):
     """Amazon Bedrock Guardrails through the ApplyGuardrail API.
 
@@ -307,6 +343,7 @@ REGISTRY: dict[str, type[Adapter]] = {
         PresidioPII,
         LLMGuard,
         PromptGuard2,
+        LlamaFirewallStatic,
         BedrockGuardrail,
         HTTPGuardrail,
     )
