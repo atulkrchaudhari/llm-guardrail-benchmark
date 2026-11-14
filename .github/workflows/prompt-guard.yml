@@ -66,3 +66,46 @@ jobs:
             results-*.md
             results-*.json
             versions.txt
+
+  # The same model as shipped inside LlamaFirewall: PromptGuardScanner with
+  # Meta's preprocessing and the 0.9 block threshold, plus the static scanners.
+  # The raw-model adapter runs in the same environment for comparison.
+  llamafirewall:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      HF_TOKEN: ${{ secrets.HF_TOKEN }}
+      PROMPT_GUARD_THRESHOLD: "0.9"
+      ADAPTERS: prompt-guard-2,llamafirewall-static,llamafirewall
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install
+        # llamafirewall 1.0.3 imports HfFolder, which huggingface_hub 1.0 removed.
+        run: |
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -e ".[llamafirewall]" "huggingface_hub<1.0"
+      - name: Record versions
+        run: pip list 2>/dev/null | grep -iE "^(llamafirewall|transformers|torch|huggingface[-_]hub) " | tee versions.txt
+      - name: Run
+        run: |
+          guardbench run --adapters "$ADAPTERS" --out results-llamafirewall.md
+          guardbench run --adapters "$ADAPTERS" --format json --out results-llamafirewall.json
+      - name: Summary
+        run: |
+          {
+            printf '## LlamaFirewall, raw model at threshold 0.9 alongside\n\n'; cat results-llamafirewall.md
+            printf '\n## Versions\n\n```\n'; cat versions.txt; printf '```\n'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Fail if LlamaFirewall did not run
+        run: |
+          grep -q '"name": "llamafirewall"' results-llamafirewall.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: llamafirewall-results
+          path: |
+            results-llamafirewall.md
+            results-llamafirewall.json
+            versions.txt
