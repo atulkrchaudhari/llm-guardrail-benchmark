@@ -266,6 +266,68 @@ class LlamaFirewallStatic(Adapter):
         return Verdict(False)
 
 
+class LlamaFirewallStack(Adapter):
+    """Meta's LlamaFirewall with PromptGuard and the static scanners.
+
+    Each field is sent as the message role LlamaFirewall uses for it:
+    ``input`` as a user message, ``context`` as a tool message, ``output``
+    as an assistant message. User and tool messages go through
+    ``PromptGuardScanner`` (Llama Prompt Guard 2 86M with LlamaFirewall's
+    own preprocessing, block threshold 0.9), then ``RegexScanner`` and
+    ``HiddenASCIIScanner``. Assistant messages go through the two static
+    scanners only, because PromptGuard is not configured for that role.
+    A block decision from any scanner is a block.
+
+    Scanners come from LlamaFirewall's ``create_scanner`` and are built once
+    and reused, so latency does not include loading the model.
+    AlignmentCheck (needs an LLM API) and CodeShield (scans generated code)
+    are not run. The model is gated: ``HF_TOKEN`` must belong to an account
+    that has accepted Meta's licence, unless the model is already cached.
+    """
+
+    name = "llamafirewall"
+    model_id: ClassVar[str] = "meta-llama/Llama-Prompt-Guard-2-86M"
+
+    def setup(self) -> str | None:
+        try:
+            import asyncio
+
+            from llamafirewall import AssistantMessage, ScanDecision, ScannerType, ToolMessage, UserMessage
+            from llamafirewall.llamafirewall import create_scanner
+        except Exception as exc:
+            return f"llamafirewall not usable ({type(exc).__name__})"
+        # LlamaFirewall asks for a token on the terminal when it has neither a
+        # token nor a local copy of the model. Stop before that happens.
+        home = os.environ.get("HF_HOME") or "~/.cache/huggingface"
+        cached = os.path.exists(os.path.expanduser(os.path.join(home, self.model_id.replace("/", "--"))))
+        if not cached and not (os.environ.get("HF_TOKEN") or os.environ.get("HUGGING_FACE_HUB_TOKEN")):
+            return "HF_TOKEN not set and the Prompt Guard model is not cached"
+        try:
+            prompt_guard = create_scanner(ScannerType.PROMPT_GUARD)
+            static = [create_scanner(ScannerType.REGEX), create_scanner(ScannerType.HIDDEN_ASCII)]
+        except ImportError:
+            # llamafirewall 1.0.3 imports HfFolder, which huggingface_hub 1.0 removed.
+            return "llamafirewall PromptGuard scanner not importable (try huggingface_hub<1.0)"
+        except Exception as exc:  # no licence, no network
+            return f"llamafirewall PromptGuard scanner not usable ({type(exc).__name__})"
+        self._run, self._block = asyncio.run, ScanDecision.BLOCK
+        self._routes = {
+            "input": (UserMessage, [prompt_guard, *static]),
+            "context": (ToolMessage, [prompt_guard, *static]),
+            "output": (AssistantMessage, static),
+        }
+        return None
+
+    def check(self, text: str, field: Field) -> Verdict:
+        message_type, scanners = self._routes[field]
+        message = message_type(content=text)
+        for scanner in scanners:
+            result = self._run(scanner.scan(message))
+            if result.decision == self._block:
+                return Verdict(True, f"{scanner.name}: {result.reason.splitlines()[0]}")
+        return Verdict(False)
+
+
 class BedrockGuardrail(Adapter):
     """Amazon Bedrock Guardrails through the ApplyGuardrail API.
 
@@ -344,6 +406,7 @@ REGISTRY: dict[str, type[Adapter]] = {
         LLMGuard,
         PromptGuard2,
         LlamaFirewallStatic,
+        LlamaFirewallStack,
         BedrockGuardrail,
         HTTPGuardrail,
     )
