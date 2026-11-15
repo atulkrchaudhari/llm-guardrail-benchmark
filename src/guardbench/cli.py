@@ -1,8 +1,8 @@
 """Command line interface.
 
     guardbench list
-    guardbench run [--adapters a,b] [--suite cases.jsonl] [--format md|json]
-                   [--out FILE] [--fail-under 0.85] [--max-fpr 0.15]
+    guardbench run [--adapters a,b] [--suite cases.jsonl] [--fields input,context]
+                   [--format md|json] [--out FILE] [--fail-under 0.85] [--max-fpr 0.15]
     guardbench verify-log FILE [--head HASH]
 """
 
@@ -17,7 +17,7 @@ from .adapters import REGISTRY
 from .evidence import verify_chain
 from .report import to_json, to_markdown
 from .runner import run_benchmark
-from .suite import load_suite
+from .suite import FIELDS, load_suite
 
 
 def _cmd_list(_: argparse.Namespace) -> int:
@@ -47,8 +47,23 @@ def _cmd_run(args: argparse.Namespace) -> int:
         return 2
 
     cases = load_suite(args.suite)
+    fields = None
+    if args.fields:
+        fields = [f.strip() for f in args.fields.split(",") if f.strip()]
+        bad = [f for f in fields if f not in FIELDS]
+        if bad or not fields:
+            print(f"unknown field(s): {', '.join(bad) or args.fields}. Use: {', '.join(FIELDS)}", file=sys.stderr)
+            return 2
+        fields = [f for f in FIELDS if f in fields]
+        cases = [c for c in cases if c.field in fields]
+        if not cases:
+            print(f"no case in the suite arrives in: {', '.join(fields)}", file=sys.stderr)
+            return 2
     reports = run_benchmark(adapters, cases)
-    text = to_json(reports, skipped) if args.format == "json" else to_markdown(reports, cases, skipped)
+    if args.format == "json":
+        text = to_json(reports, skipped, fields)
+    else:
+        text = to_markdown(reports, cases, skipped, fields)
     if args.out:
         Path(args.out).write_text(text, encoding="utf-8")
     else:
@@ -85,6 +100,7 @@ def main(argv: list[str] | None = None) -> int:
     run = sub.add_parser("run", help="run the suite against one or more guardrails")
     run.add_argument("--adapters", help="comma-separated adapter names (default: all available)")
     run.add_argument("--suite", help="path to a JSONL suite (default: built-in)")
+    run.add_argument("--fields", help="comma-separated fields to score: input, context, output (default: all)")
     run.add_argument("--format", choices=("md", "json"), default="md")
     run.add_argument("--out", help="write the report to this file instead of stdout")
     run.add_argument("--fail-under", type=float, help="exit 1 if any adapter's block rate is below this (0 to 1)")

@@ -17,7 +17,7 @@ ATTACK_CATEGORIES = (
     "data_leakage",
 )
 BENIGN = "benign"
-_FIELDS = {"input", "context", "output"}
+FIELDS = ("input", "context", "output")
 
 
 @dataclass(frozen=True)
@@ -44,7 +44,7 @@ def load_suite(path: str | Path | None = None) -> list[Case]:
         case = Case(**json.loads(line))
         if case.id in seen:
             raise ValueError(f"line {number}: duplicate case id {case.id!r}")
-        if case.field not in _FIELDS:
+        if case.field not in FIELDS:
             raise ValueError(f"line {number}: unknown field {case.field!r}")
         if case.category not in (*ATTACK_CATEGORIES, BENIGN):
             raise ValueError(f"line {number}: unknown category {case.category!r}")
