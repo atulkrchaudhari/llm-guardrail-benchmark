@@ -64,3 +64,37 @@ def test_cli_regression_gate_fails_when_threshold_not_met(capsys):
 
 def test_cli_rejects_unknown_adapter():
     assert main(["run", "--adapters", "nope"]) == 2
+
+
+def test_cli_fields_filter_scores_only_those_fields(tmp_path):
+    out = tmp_path / "report.json"
+    args = ["run", "--adapters", "pattern-baseline", "--fields", "context, input"]
+    assert main([*args, "--format", "json", "--out", str(out)]) == 0
+    data = json.loads(out.read_text())
+    cases = [c for c in load_suite() if c.field in ("input", "context")]
+    assert data["fields"] == ["input", "context"]
+    counted = sum(v["total"] for v in data["adapters"][0]["by_category"].values())
+    assert counted == len(cases) < len(load_suite())
+    by_id = {c.id: c for c in load_suite()}
+    assert all(by_id[i].field != "output" for i in data["adapters"][0]["missed"])
+
+
+def test_cli_fields_filter_markdown_marks_empty_categories(capsys):
+    assert main(["run", "--adapters", "pattern-baseline", "--fields", "input,context"]) == 0
+    text = capsys.readouterr().out
+    assert "Fields: input, context." in text
+    assert "| data_leakage | not applicable |" in text
+
+
+def test_cli_without_fields_keeps_every_case(tmp_path):
+    out = tmp_path / "report.json"
+    assert main(["run", "--adapters", "pattern-baseline", "--format", "json", "--out", str(out)]) == 0
+    data = json.loads(out.read_text())
+    assert "fields" not in data
+    assert sum(v["total"] for v in data["adapters"][0]["by_category"].values()) == len(load_suite())
+
+
+@pytest.mark.parametrize("value", ["inputs", "input,memory", ","])
+def test_cli_rejects_unknown_field(value, capsys):
+    assert main(["run", "--adapters", "pattern-baseline", "--fields", value]) == 2
+    assert "unknown field(s)" in capsys.readouterr().err
