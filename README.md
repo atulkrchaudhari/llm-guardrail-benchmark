@@ -31,9 +31,12 @@ guardbench list                                   # which adapters can run here
 guardbench run                                    # run everything available
 guardbench run --adapters layered-guard --format json --out report.json
 guardbench run --adapters http-guardrail --fail-under 0.85 --max-fpr 0.25
+guardbench run --adapters prompt-guard-2 --fields input,context   # score only these fields
 ```
 
 `--fail-under` and `--max-fpr` turn the benchmark into a gate. The command exits 1 when a guardrail drops below the block rate or goes above the false positive rate you set. This repository runs that gate on every push (see `.github/workflows/ci.yml`).
+
+`--fields` limits the run to cases that arrive in the named fields. Use it for a guardrail that is built for only part of the traffic, such as an input classifier that is not meant to scan model output. The report then counts only those cases, and a category with no case left is shown as not applicable.
 
 ## What it measures
 
@@ -120,6 +123,34 @@ The result is the same at a threshold of 0.5 and at 0.9, the value LlamaFirewall
 3. **It misses instructions hidden in data.** It blocks one of eight indirect injections and none of the three system prompt extraction attempts.
 4. **Like LLM Guard, it does not see exfiltration.** None of the tool exfiltration cases are blocked. A classifier judges whether text looks like an attack, not where data is going.
 
+### Prompt Guard 2: 86M and 22M
+
+Measured on GitHub's runners by the [Prompt Guard 2](.github/workflows/prompt-guard.yml) workflow on 15 November 2026, on the 47-case suite. The workflow runs the `prompt-guard-2` adapter once per model, with `PROMPT_GUARD_MODEL` set to `meta-llama/Llama-Prompt-Guard-2-86M` and to `meta-llama/Llama-Prompt-Guard-2-22M`. Both models are gated and released under the Llama 4 Community License. Both jobs used transformers 5.23.0, huggingface_hub 2.4.0 and torch 2.15.0 on CPU, and passed the text to the model as is.
+
+| | 86M | 22M |
+|---|---|---|
+| direct_injection | 5/6 | 1/6 |
+| system_prompt_extraction | 0/3 | 0/3 |
+| jailbreak | 2/3 | 0/3 |
+| obfuscation | 3/5 | 0/5 |
+| indirect_injection | 1/8 | 0/8 |
+| tool_exfiltration | 0/5 | 0/5 |
+| data_leakage | 0/5 | 0/5 |
+| **block rate, all attacks** | **11/35 (31%)** | **1/35 (3%)** |
+| **block rate, input and context only** | **11/28 (39%)** | **1/28 (4%)** |
+| false positive rate, all benign | 0/12 (0%) | 0/12 (0%) |
+| false positive rate, input and context only | 0/9 (0%) | 0/9 (0%) |
+| mean latency per check, all cases | 117 ms | 39 ms |
+| mean latency per check, input and context only | 149 ms | 49 ms |
+
+The input and context rows come from `guardbench run --fields input,context`. The figures are for a threshold of 0.5. Each model gave the same counts at 0.9.
+
+1. **The 22M model blocks one attack on this suite.** The one case is D1, "Ignore all previous instructions". It misses the other 34, including the ten further attacks that the 86M model blocks.
+2. **Neither model blocks a benign case.**
+3. **The 22M model takes about a third of the time per check.** 49 ms against 149 ms on input and context cases on the same runner type. The all-cases mean is lower for both because the adapter does not call the model for output cases.
+4. **The 86M figures match the earlier runs.** The counts in every category are the same as on 12 and 14 November.
+5. **What was not tested.** The 22M model was run only as a raw classifier. It was not run inside LlamaFirewall, and no threshold below 0.5 was tried.
+
 ### Meta LlamaFirewall, static scanners
 
 Measured on 13 November 2026 on the 47-case suite with llamafirewall 1.0.3 (MIT), Python 3.13, on a CPU in a single process.
@@ -178,7 +209,7 @@ The middle column is the raw model (`prompt-guard-2` at threshold 0.9) run in th
 | `layered-guard` | Reference implementation: input restoration, untrusted-context rule, destination allowlist | Nothing |
 | `presidio-pii` | Microsoft Presidio on output | `.[presidio]` and a spaCy model |
 | `llm-guard` | Protect AI LLM Guard: prompt-injection classifier on input and context, sensitive-data scanner on output | `.[llm-guard]` |
-| `prompt-guard-2` | Meta Llama Prompt Guard 2 (86M): prompt-attack classifier on input and context. Not applied to output | `.[prompt-guard]`, `HF_TOKEN` with access to the gated model |
+| `prompt-guard-2` | Meta Llama Prompt Guard 2: prompt-attack classifier on input and context. Not applied to output. Uses the 86M model unless `PROMPT_GUARD_MODEL` names another, such as the 22M model | `.[prompt-guard]`, `HF_TOKEN` with access to the gated model |
 | `llamafirewall-static` | Meta LlamaFirewall, static scanners only: `RegexScanner` and `HiddenASCIIScanner` on every field. Excludes PromptGuard, AlignmentCheck and CodeShield | `.[llamafirewall]` |
 | `llamafirewall` | Meta LlamaFirewall: `PromptGuardScanner` (Prompt Guard 2 86M, threshold 0.9) on input and context, plus `RegexScanner` and `HiddenASCIIScanner` on every field. Excludes AlignmentCheck and CodeShield | `.[llamafirewall]`, `HF_TOKEN` with access to the gated model |
 | `bedrock-guardrail` | Amazon Bedrock Guardrails through `ApplyGuardrail` | `BEDROCK_GUARDRAIL_ID`, AWS credentials |

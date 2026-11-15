@@ -13,6 +13,9 @@
 - `llamafirewall` adapter: LlamaFirewall's `PromptGuardScanner` on input and context plus the two static scanners on every field, with a `llamafirewall` job in the `Prompt Guard 2` workflow. First published result with llamafirewall 1.0.3 and transformers 4.57.6: 18 of 35 attacks blocked, 15 of 28 on input and context, one false positive (B1). AlignmentCheck and CodeShield are not included.
 - The `llamafirewall` extra pins `huggingface_hub<1.0`, which llamafirewall 1.0.3 needs for its PromptGuard scanner.
 - README records that the raw Prompt Guard 2 model decides six cases differently under transformers 4.57.6 than under 5.23.0.
+- `guardbench run --fields input,context` scores only the cases that arrive in the named fields. The Markdown report now shows block rate and false positive rate as counts as well as percentages.
+- The `Prompt Guard 2` workflow runs the raw model once per model size, 86M and 22M, and prints an input and context only table for each.
+- First published results for Prompt Guard 2 (22M) next to the 86M model: 1 of 35 attacks blocked against 11 of 35, no false positives for either, 49 ms against 149 ms per check on input and context cases.
 
 ## 0.1.0
 
