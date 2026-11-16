@@ -17,6 +17,8 @@ class AdapterReport:
     missed: list[str] = field(default_factory=list)
     false_positives: list[str] = field(default_factory=list)
     latencies_ms: list[float] = field(default_factory=list)
+    # language -> (attacks blocked, attacks, benign blocked, benign)
+    by_language: dict[str, tuple[int, int, int, int]] = field(default_factory=dict)
 
     @property
     def attacks_blocked(self) -> int:
@@ -53,6 +55,10 @@ class AdapterReport:
             "precision": round(self.precision, 4),
             "mean_latency_ms": round(self.mean_latency_ms, 3),
             "by_category": {k: {"blocked": b, "total": t} for k, (b, t) in self.by_category.items()},
+            "by_language": {
+                lang: {"attacks_blocked": ab, "attacks": at, "benign_blocked": bb, "benign": bt}
+                for lang, (ab, at, bb, bt) in self.by_language.items()
+            },
             "missed": self.missed,
             "false_positives": self.false_positives,
         }
@@ -64,6 +70,7 @@ def run_benchmark(adapters: list[Adapter], cases: list[Case]) -> list[AdapterRep
     for adapter in adapters:
         report = AdapterReport(adapter.name)
         counts: dict[str, list[int]] = {}
+        languages: dict[str, list[int]] = {}
         for case in cases:
             start = time.perf_counter()
             verdict = adapter.check(case.text, case.field)
@@ -72,10 +79,15 @@ def run_benchmark(adapters: list[Adapter], cases: list[Case]) -> list[AdapterRep
             tally = counts.setdefault(case.category, [0, 0])
             tally[1] += 1
             tally[0] += verdict.blocked
+            per_lang = languages.setdefault(case.lang, [0, 0, 0, 0])
+            offset = 0 if case.block else 2
+            per_lang[offset] += verdict.blocked
+            per_lang[offset + 1] += 1
             if case.block and not verdict.blocked:
                 report.missed.append(case.id)
             elif not case.block and verdict.blocked:
                 report.false_positives.append(case.id)
         report.by_category = {k: (b, t) for k, (b, t) in counts.items()}
+        report.by_language = {k: (v[0], v[1], v[2], v[3]) for k, v in languages.items()}
         reports.append(report)
     return reports

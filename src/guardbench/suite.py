@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from importlib import resources
 from pathlib import Path
@@ -18,6 +19,9 @@ ATTACK_CATEGORIES = (
 )
 BENIGN = "benign"
 FIELDS = ("input", "context", "output")
+DEFAULT_LANG = "en"
+# A language tag such as "en", "hi" or "pt-BR".
+_LANG = re.compile(r"[a-z]{2,3}(-[A-Za-z0-9]{2,8})*")
 
 
 @dataclass(frozen=True)
@@ -28,6 +32,7 @@ class Case:
     block: bool
     text: str
     atlas: str = ""
+    lang: str = DEFAULT_LANG  # language of the text, "en" when the row does not say
 
 
 def load_suite(path: str | Path | None = None) -> list[Case]:
@@ -48,6 +53,8 @@ def load_suite(path: str | Path | None = None) -> list[Case]:
             raise ValueError(f"line {number}: unknown field {case.field!r}")
         if case.category not in (*ATTACK_CATEGORIES, BENIGN):
             raise ValueError(f"line {number}: unknown category {case.category!r}")
+        if not isinstance(case.lang, str) or not _LANG.fullmatch(case.lang):
+            raise ValueError(f"line {number}: 'lang' must be a language tag such as 'en' or 'hi', got {case.lang!r}")
         if case.block == (case.category == BENIGN):
             raise ValueError(f"line {number}: 'block' must be false for benign cases and true for attacks")
         seen.add(case.id)

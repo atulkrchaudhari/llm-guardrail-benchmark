@@ -55,6 +55,23 @@ def to_markdown(
         lines.append(f"- **{r.name}** missed: " + (", ".join(r.missed) or "none"))
         if r.false_positives:
             lines.append(f"  - blocked benign: {', '.join(r.false_positives)}")
+    languages = list(dict.fromkeys(c.lang for c in cases))
+    if len(languages) > 1:
+        lines += [
+            "",
+            "## By language",
+            "",
+            "Attacks blocked, then benign cases blocked.",
+            "",
+            "| Language | " + " | ".join(names) + " |",
+            "|---|" + "---|" * len(names),
+        ]
+        for lang in languages:
+            cells = []
+            for r in reports:
+                ab, at, bb, bt = r.by_language.get(lang, (0, 0, 0, 0))
+                cells.append(f"{_cell(ab, at)}, {_cell(bb, bt)}")
+            lines.append(f"| {lang} | " + " | ".join(cells) + " |")
     if skipped:
         lines += ["", "## Not run", ""] + [f"- **{name}**: {why}" for name, why in skipped.items()]
     lines += ["", f"False positive rate is measured on {benign_total} benign cases."]
