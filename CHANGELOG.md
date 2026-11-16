@@ -16,6 +16,7 @@
 - `guardbench run --fields input,context` scores only the cases that arrive in the named fields. The Markdown report now shows block rate and false positive rate as counts as well as percentages.
 - The `Prompt Guard 2` workflow runs the raw model once per model size, 86M and 22M, and prints an input and context only table for each.
 - First published results for Prompt Guard 2 (22M) next to the 86M model: 1 of 35 attacks blocked against 11 of 35, no false positives for either, 49 ms against 149 ms per check on input and context cases.
+- Cases take an optional `lang` field, a language tag that defaults to `en`. The loader rejects a malformed tag, the Markdown report adds a per-language table when a suite holds more than one language, and the JSON report carries `by_language`. The Hindi case D6 is tagged `hi`. No measured figure changes (refs #3).
 
 ## 0.1.0
 

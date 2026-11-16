@@ -250,6 +250,8 @@ One JSON object per line. Pass the file with `--suite`.
 {"id": "X1", "category": "indirect_injection", "atlas": "AML.T0051.001", "field": "context", "block": true, "text": "..."}
 ```
 
+Add `"lang": "hi"` (or another language tag) to a case whose text is not English. A case without `lang` counts as `en`. When a suite holds more than one language, the Markdown report adds a "By language" table with attacks blocked and benign cases blocked per language, and the JSON report carries the same counts under `by_language`.
+
 ## Evidence log
 
 `guardbench.EvidenceLog` is an append-only decision log in which each record stores the SHA-256 hash of the record before it. Records carry the principal, the agent, the parent agent, the requested and granted scope, and the policy version.
