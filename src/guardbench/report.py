@@ -8,10 +8,17 @@ from .runner import AdapterReport
 from .suite import ATTACK_CATEGORIES, BENIGN, Case
 
 
-def to_json(reports: list[AdapterReport], skipped: dict[str, str], fields: list[str] | None = None) -> str:
+def to_json(
+    reports: list[AdapterReport],
+    skipped: dict[str, str],
+    fields: list[str] | None = None,
+    langs: list[str] | None = None,
+) -> str:
     data: dict = {"adapters": [r.to_dict() for r in reports], "skipped": skipped}
     if fields:
         data["fields"] = fields
+    if langs:
+        data["langs"] = langs
     return json.dumps(data, indent=2)
 
 
@@ -21,7 +28,11 @@ def _cell(blocked: int, total: int) -> str:
 
 
 def to_markdown(
-    reports: list[AdapterReport], cases: list[Case], skipped: dict[str, str], fields: list[str] | None = None
+    reports: list[AdapterReport],
+    cases: list[Case],
+    skipped: dict[str, str],
+    fields: list[str] | None = None,
+    langs: list[str] | None = None,
 ) -> str:
     attacks = sum(c.block for c in cases)
     benign_total = sum(c.category == BENIGN for c in cases)
@@ -30,7 +41,8 @@ def to_markdown(
         "# guardbench results",
         "",
         f"{len(cases)} cases: {attacks} attacks, {len(cases) - attacks} benign."
-        + (f" Fields: {', '.join(fields)}." if fields else ""),
+        + (f" Fields: {', '.join(fields)}." if fields else "")
+        + (f" Languages: {', '.join(langs)}." if langs else ""),
         "",
         "| Category | " + " | ".join(names) + " |",
         "|---|" + "---|" * len(names),

@@ -1,7 +1,7 @@
 """Command line interface.
 
     guardbench list
-    guardbench run [--adapters a,b] [--suite cases.jsonl] [--fields input,context]
+    guardbench run [--adapters a,b] [--suite cases.jsonl] [--fields input,context] [--lang en,hi]
                    [--format md|json] [--out FILE] [--fail-under 0.85] [--max-fpr 0.15]
     guardbench verify-log FILE [--head HASH]
 """
@@ -59,11 +59,28 @@ def _cmd_run(args: argparse.Namespace) -> int:
         if not cases:
             print(f"no case in the suite arrives in: {', '.join(fields)}", file=sys.stderr)
             return 2
+    langs = None
+    if args.lang:
+        langs = list(dict.fromkeys(tag.strip() for tag in args.lang.split(",") if tag.strip()))
+        available = list(dict.fromkeys(c.lang for c in load_suite(args.suite)))
+        bad = [tag for tag in langs if tag not in available]
+        if bad or not langs:
+            print(
+                f"no case in the suite has language: {', '.join(bad) or args.lang}. "
+                f"The suite has: {', '.join(available)}",
+                file=sys.stderr,
+            )
+            return 2
+        cases = [c for c in cases if c.lang in langs]
+        if not cases:
+            where = ", ".join(fields or FIELDS)
+            print(f"no case is left for language {', '.join(langs)} in fields {where}", file=sys.stderr)
+            return 2
     reports = run_benchmark(adapters, cases)
     if args.format == "json":
-        text = to_json(reports, skipped, fields)
+        text = to_json(reports, skipped, fields, langs)
     else:
-        text = to_markdown(reports, cases, skipped, fields)
+        text = to_markdown(reports, cases, skipped, fields, langs)
     if args.out:
         Path(args.out).write_text(text, encoding="utf-8")
     else:
@@ -101,6 +118,7 @@ def main(argv: list[str] | None = None) -> int:
     run.add_argument("--adapters", help="comma-separated adapter names (default: all available)")
     run.add_argument("--suite", help="path to a JSONL suite (default: built-in)")
     run.add_argument("--fields", help="comma-separated fields to score: input, context, output (default: all)")
+    run.add_argument("--lang", help="comma-separated language tags to score, such as en or hi (default: all)")
     run.add_argument("--format", choices=("md", "json"), default="md")
     run.add_argument("--out", help="write the report to this file instead of stdout")
     run.add_argument("--fail-under", type=float, help="exit 1 if any adapter's block rate is below this (0 to 1)")
