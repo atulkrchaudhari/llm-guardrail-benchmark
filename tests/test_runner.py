@@ -101,6 +101,75 @@ def test_cli_rejects_unknown_field(value, capsys):
     assert "unknown field(s)" in capsys.readouterr().err
 
 
+def test_cli_lang_filter_scores_only_that_language(tmp_path):
+    out = tmp_path / "report.json"
+    args = ["run", "--adapters", "pattern-baseline", "--lang", "hi"]
+    assert main([*args, "--format", "json", "--out", str(out)]) == 0
+    data = json.loads(out.read_text())
+    hindi = [c for c in load_suite() if c.lang == "hi"]
+    assert data["langs"] == ["hi"]
+    assert list(data["adapters"][0]["by_language"]) == ["hi"]
+    counted = sum(v["total"] for v in data["adapters"][0]["by_category"].values())
+    assert counted == len(hindi) < len(load_suite())
+    by_id = {c.id: c for c in load_suite()}
+    assert all(by_id[i].lang == "hi" for i in data["adapters"][0]["missed"])
+
+
+def test_cli_lang_filter_is_named_in_the_markdown_report(capsys):
+    assert main(["run", "--adapters", "pattern-baseline", "--lang", "en"]) == 0
+    text = capsys.readouterr().out
+    english = [c for c in load_suite() if c.lang == "en"]
+    assert f"{len(english)} cases: " in text
+    assert "Languages: en." in text
+    assert "## By language" not in text
+
+
+def test_cli_lang_filter_combines_with_fields(tmp_path):
+    out = tmp_path / "report.json"
+    args = ["run", "--adapters", "pattern-baseline", "--lang", "en, hi", "--fields", "input"]
+    assert main([*args, "--format", "json", "--out", str(out)]) == 0
+    data = json.loads(out.read_text())
+    assert data["langs"] == ["en", "hi"] and data["fields"] == ["input"]
+    wanted = [c for c in load_suite() if c.field == "input"]
+    assert sum(v["total"] for v in data["adapters"][0]["by_category"].values()) == len(wanted)
+
+
+def test_cli_lang_gate_applies_to_the_filtered_cases(tmp_path):
+    # The pattern baseline blocks no Hindi attack, so a block rate gate on Hindi alone fails.
+    args = ["run", "--adapters", "pattern-baseline", "--out", str(tmp_path / "r.md"), "--fail-under", "0.5"]
+    assert main([*args, "--lang", "hi"]) == 1
+    assert main([*args, "--lang", "en"]) == 0
+
+
+@pytest.mark.parametrize("value", ["fr", "en,xx", "Hindi", ","])
+def test_cli_rejects_a_language_the_suite_does_not_have(value, capsys):
+    assert main(["run", "--adapters", "pattern-baseline", "--lang", value]) == 2
+    err = capsys.readouterr().err
+    assert "no case in the suite has language" in err
+    assert "The suite has: en, hi" in err
+
+
+def test_cli_reports_when_language_and_fields_leave_no_case(tmp_path, capsys):
+    suite = _write_suite(
+        tmp_path / "s.jsonl",
+        [
+            {"id": "A", "category": "benign", "field": "input", "block": False, "text": "hello"},
+            {"id": "B", "category": "benign", "field": "output", "block": False, "text": "नमस्ते", "lang": "hi"},
+        ],
+    )
+    args = ["run", "--adapters", "pattern-baseline", "--suite", str(suite), "--lang", "hi", "--fields", "input"]
+    assert main(args) == 2
+    assert "no case is left for language hi in fields input" in capsys.readouterr().err
+
+
+def test_cli_without_lang_keeps_every_language(tmp_path):
+    out = tmp_path / "report.json"
+    assert main(["run", "--adapters", "pattern-baseline", "--format", "json", "--out", str(out)]) == 0
+    data = json.loads(out.read_text())
+    assert "langs" not in data
+    assert set(data["adapters"][0]["by_language"]) == {c.lang for c in load_suite()}
+
+
 def _write_suite(path, rows):
     path.write_text("\n".join(json.dumps(r, ensure_ascii=False) for r in rows), encoding="utf-8")
     return path
