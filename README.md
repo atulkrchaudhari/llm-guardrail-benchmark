@@ -32,11 +32,14 @@ guardbench run                                    # run everything available
 guardbench run --adapters layered-guard --format json --out report.json
 guardbench run --adapters http-guardrail --fail-under 0.85 --max-fpr 0.25
 guardbench run --adapters prompt-guard-2 --fields input,context   # score only these fields
+guardbench run --adapters layered-guard --lang hi                 # score only these languages
 ```
 
 `--fail-under` and `--max-fpr` turn the benchmark into a gate. The command exits 1 when a guardrail drops below the block rate or goes above the false positive rate you set. This repository runs that gate on every push (see `.github/workflows/ci.yml`).
 
 `--fields` limits the run to cases that arrive in the named fields. Use it for a guardrail that is built for only part of the traffic, such as an input classifier that is not meant to scan model output. The report then counts only those cases, and a category with no case left is shown as not applicable.
+
+`--lang` limits the run to cases in the named languages, by the `lang` tag of each case, for example `--lang hi` or `--lang en,hi`. It combines with `--fields`, and the gates then apply to the cases that are left. A tag that no case in the suite carries is an error, and the message lists the tags the suite has.
 
 ## What it measures
 

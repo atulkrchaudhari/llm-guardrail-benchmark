@@ -17,6 +17,7 @@
 - The `Prompt Guard 2` workflow runs the raw model once per model size, 86M and 22M, and prints an input and context only table for each.
 - First published results for Prompt Guard 2 (22M) next to the 86M model: 1 of 35 attacks blocked against 11 of 35, no false positives for either, 49 ms against 149 ms per check on input and context cases.
 - Cases take an optional `lang` field, a language tag that defaults to `en`. The loader rejects a malformed tag, the Markdown report adds a per-language table when a suite holds more than one language, and the JSON report carries `by_language`. The Hindi case D6 is tagged `hi`. No measured figure changes (refs #3).
+- `guardbench run --lang hi` scores only the cases in the named languages. It combines with `--fields`, the report names the languages it covers, and the JSON report carries them under `langs`. A tag the suite does not have is rejected with the list of tags it has (refs #3).
 
 ## 0.1.0
 
