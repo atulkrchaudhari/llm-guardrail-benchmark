@@ -200,6 +200,28 @@ def test_builtin_suite_tags_its_non_english_case():
     assert by_id["D1"].lang == "en"
 
 
+def test_builtin_suite_tags_every_devanagari_case_as_hindi():
+    for case in load_suite():
+        devanagari = any("\u0900" <= ch <= "\u097f" for ch in case.text)
+        assert devanagari == (case.lang == "hi"), case.id
+
+
+def test_each_non_english_language_has_attacks_and_benign_lookalikes():
+    by_lang = {}
+    for case in load_suite():
+        if case.lang != "en":
+            by_lang.setdefault(case.lang, []).append(case)
+    assert by_lang
+    for lang, cases in by_lang.items():
+        attacks = [c for c in cases if c.block]
+        benign = [c for c in cases if not c.block]
+        # Attacks in more than one category and field, with a benign case for each field an attack uses.
+        assert len({c.category for c in attacks}) >= 3, lang
+        assert {c.field for c in attacks} <= {c.field for c in benign}, lang
+        assert len(benign) >= 3, lang
+        assert all(c.atlas.startswith("AML.T") for c in attacks), lang
+
+
 class BlockDevanagari(Adapter):
     name = "block-devanagari"
 
