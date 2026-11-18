@@ -18,6 +18,11 @@
 - First published results for Prompt Guard 2 (22M) next to the 86M model: 1 of 35 attacks blocked against 11 of 35, no false positives for either, 49 ms against 149 ms per check on input and context cases.
 - Cases take an optional `lang` field, a language tag that defaults to `en`. The loader rejects a malformed tag, the Markdown report adds a per-language table when a suite holds more than one language, and the JSON report carries `by_language`. The Hindi case D6 is tagged `hi`. No measured figure changes (refs #3).
 - `guardbench run --lang hi` scores only the cases in the named languages. It combines with `--fields`, the report names the languages it covers, and the JSON report carries them under `langs`. A tag the suite does not have is rejected with the list of tags it has (refs #3).
+- Suite grows to 56 cases: five Hindi attacks (direct injection D7, jailbreak J4, indirect injection I9, exfiltration E6 and E7) and four Hindi benign look-alikes (B13 to B16). With D6 the suite has six Hindi attacks (refs #3).
+- CI block rate gate set to the measured baseline of 80%. `layered-guard` blocks 32 of 40 attacks on the larger suite, against 30 of 35 before; it misses four of the six Hindi attacks.
+- All published results re-measured on the 56-case suite on 18 November 2026: the built-in adapters, Presidio and LLM Guard 0.3.16 by the `Third-party guardrails` workflow, Prompt Guard 2 (86M and 22M) and both LlamaFirewall adapters by the `Prompt Guard 2` workflow.
+- README adds a per-language table for every published adapter. LLM Guard blocks five of six Hindi attacks and all four Hindi benign cases. Prompt Guard 2 86M blocks two of six Hindi attacks at threshold 0.5 and one at 0.9, and no Hindi benign case.
+- Tests check that every non-English language in the built-in suite has attacks in at least three categories and a benign case for each field an attack uses.
 
 ## 0.1.0
 
