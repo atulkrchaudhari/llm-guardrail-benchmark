@@ -1,4 +1,5 @@
 import json
+import re
 
 import pytest
 
@@ -130,7 +131,7 @@ def test_cli_lang_filter_combines_with_fields(tmp_path):
     assert main([*args, "--format", "json", "--out", str(out)]) == 0
     data = json.loads(out.read_text())
     assert data["langs"] == ["en", "hi"] and data["fields"] == ["input"]
-    wanted = [c for c in load_suite() if c.field == "input"]
+    wanted = [c for c in load_suite() if c.field == "input" and c.lang in ("en", "hi")]
     assert sum(v["total"] for v in data["adapters"][0]["by_category"].values()) == len(wanted)
 
 
@@ -220,6 +221,18 @@ def test_each_non_english_language_has_attacks_and_benign_lookalikes():
         assert {c.field for c in attacks} <= {c.field for c in benign}, lang
         assert len(benign) >= 3, lang
         assert all(c.atlas.startswith("AML.T") for c in attacks), lang
+
+
+_HOST_IN_TEXT = re.compile(r"(?:https?://|@)([A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+)")
+
+
+def test_builtin_suite_uses_reserved_domains_only():
+    # CONTRIBUTING.md: reserved example domains only, in every language.
+    reserved = ("example", "example.com", "example.org", "example.net")
+    for case in load_suite():
+        for host in _HOST_IN_TEXT.findall(case.text):
+            host = host.lower()
+            assert any(host == r or host.endswith("." + r) for r in reserved), (case.id, host)
 
 
 class BlockDevanagari(Adapter):
