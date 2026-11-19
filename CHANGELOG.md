@@ -23,6 +23,12 @@
 - All published results re-measured on the 56-case suite on 18 November 2026: the built-in adapters, Presidio and LLM Guard 0.3.16 by the `Third-party guardrails` workflow, Prompt Guard 2 (86M and 22M) and both LlamaFirewall adapters by the `Prompt Guard 2` workflow.
 - README adds a per-language table for every published adapter. LLM Guard blocks five of six Hindi attacks and all four Hindi benign cases. Prompt Guard 2 86M blocks two of six Hindi attacks at threshold 0.5 and one at 0.9, and no Hindi benign case.
 - Tests check that every non-English language in the built-in suite has attacks in at least three categories and a benign case for each field an attack uses.
+- Suite grows to 66 cases: six Spanish attacks (direct injection D8, system prompt extraction S4, jailbreak J5, indirect injection I10, exfiltration E8 and E9) and four Spanish benign look-alikes (B17 to B20), all tagged `es` (refs #3).
+- CI block rate gate set to the measured baseline of 73%. `layered-guard` blocks 34 of 46 attacks on the larger suite, against 32 of 40 before; it misses four of the six Spanish attacks.
+- Tests check that every host named in a built-in case is a reserved example domain.
+- All published results re-measured on the 66-case suite on 19 November 2026: the built-in adapters, Presidio and LLM Guard 0.3.16 by the `Third-party guardrails` workflow, Prompt Guard 2 (86M and 22M) and both LlamaFirewall adapters by the `Prompt Guard 2` workflow.
+- README per-language table gains a Spanish column. LLM Guard blocks five of six Spanish attacks and three of four Spanish benign cases. Prompt Guard 2 86M blocks two of six Spanish attacks at both thresholds and no Spanish benign case. LlamaFirewall with PromptGuard blocks one of six.
+- README records that the raw Prompt Guard 2 model now decides seven cases differently under transformers 4.57.6 than under 5.23.0; the Spanish jailbreak J5 is the seventh.
 
 ## 0.1.0
 
