@@ -29,6 +29,11 @@
 - All published results re-measured on the 66-case suite on 19 November 2026: the built-in adapters, Presidio and LLM Guard 0.3.16 by the `Third-party guardrails` workflow, Prompt Guard 2 (86M and 22M) and both LlamaFirewall adapters by the `Prompt Guard 2` workflow.
 - README per-language table gains a Spanish column. LLM Guard blocks five of six Spanish attacks and three of four Spanish benign cases. Prompt Guard 2 86M blocks two of six Spanish attacks at both thresholds and no Spanish benign case. LlamaFirewall with PromptGuard blocks one of six.
 - README records that the raw Prompt Guard 2 model now decides seven cases differently under transformers 4.57.6 than under 5.23.0; the Spanish jailbreak J5 is the seventh.
+- Suite grows to 76 cases: six German attacks (direct injection D9, system prompt extraction S5, jailbreak J6, indirect injection I11, exfiltration E10 and E11) and four German benign look-alikes (B21 to B24), all tagged `de` (refs #3).
+- CI block rate gate set to the measured baseline of 69%. `layered-guard` blocks 36 of 52 attacks on the larger suite, against 34 of 46 before; it misses four of the six German attacks.
+- All published results re-measured on the 76-case suite on 21 November 2026: the built-in adapters, Presidio and LLM Guard 0.3.16 by the `Third-party guardrails` workflow, Prompt Guard 2 (86M and 22M) and both LlamaFirewall adapters by the `Prompt Guard 2` workflow. The raw Prompt Guard 2 jobs now run under transformers 5.24.0.
+- README per-language table gains a German column. LLM Guard blocks four of six German attacks and two of four German benign cases. Prompt Guard 2 86M blocks three of six German attacks at threshold 0.5 and two at 0.9, and one German benign case (B21) at both, its first false positive on this suite. LlamaFirewall with PromptGuard blocks no German attack.
+- README records that the raw Prompt Guard 2 model now decides ten cases differently under transformers 4.57.6 than under 5.24.0; the German cases J6, I11 and B21 are the three new ones.
 
 ## 0.1.0
 
