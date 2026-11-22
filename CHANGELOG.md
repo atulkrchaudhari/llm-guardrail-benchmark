@@ -34,6 +34,7 @@
 - All published results re-measured on the 76-case suite on 21 November 2026: the built-in adapters, Presidio and LLM Guard 0.3.16 by the `Third-party guardrails` workflow, Prompt Guard 2 (86M and 22M) and both LlamaFirewall adapters by the `Prompt Guard 2` workflow. The raw Prompt Guard 2 jobs now run under transformers 5.24.0.
 - README per-language table gains a German column. LLM Guard blocks four of six German attacks and two of four German benign cases. Prompt Guard 2 86M blocks three of six German attacks at threshold 0.5 and two at 0.9, and one German benign case (B21) at both, its first false positive on this suite. LlamaFirewall with PromptGuard blocks no German attack.
 - README records that the raw Prompt Guard 2 model now decides ten cases differently under transformers 4.57.6 than under 5.24.0; the German cases J6, I11 and B21 are the three new ones.
+- Cases can carry a structured tool call in place of `text`: `tool_call` with `name`, `arguments`, `granted` and an optional `scope`, always in the `output` field. The loader validates the row and renders the call as one line of text. The runner passes the call to the new `Adapter.check_tool_call`, which by default scores the rendered line as `output`, so existing adapters run unchanged. The Markdown report counts tool-call cases. The built-in suite has no tool-call case yet and no measured figure changes (refs #4).
 
 ## 0.1.0
 

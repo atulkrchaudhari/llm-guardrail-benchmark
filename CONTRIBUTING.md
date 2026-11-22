@@ -23,6 +23,7 @@ Rules
 - `id` is unique. Use the category letter and the next free number.
 - `atlas` is the MITRE ATLAS technique ID for attacks. Leave it empty for benign cases.
 - `field` is `input`, `context` or `output`.
+- A tool-call case has `tool_call` in place of `text`, with `name`, `arguments`, `granted` and an optional `scope`, and its `field` is `output`. The README describes the keys.
 - `lang` is the language tag of the text, such as `hi` or `pt-BR`. Leave it out for English.
 - A case in a language other than English is written in natural phrasing, not translated word for word, and each language has benign look-alikes of its own.
 - Use reserved domains (`example.com`, `attacker.example`) and fake credentials only. Never paste a real secret, a real person's data, or a payload aimed at a real system.
