@@ -53,6 +53,19 @@ Each evidence record carries
 | 14 | AML.T0055 Unsecured Credentials | Reads API keys from prompts, logs or config | Secret detection on input and output, no secrets in evidence records | AML.M0005 Control Access to AI Models and Data at Rest | Detector hit, value never stored | Custom secret formats |
 | 15 | (not in ATLAS) Evidence tampering | Edits or deletes log entries after an incident | Hash chain, append-only store, periodic external anchor of the chain head | AML.M0024 AI Telemetry Logging | The chain itself | Whoever controls the store before the first anchor |
 
+### Tool calls in the benchmark
+
+Boundary 3 says a tool call is a request. Threats 7, 8 and 11 are decided on that request, so the benchmark can present one to a guardrail as structured data. A `tool_call` case carries
+
+- `name`, the tool the model wants to call
+- `arguments`, the arguments as a JSON object
+- `granted`, the scopes the agent was granted for the task
+- `scope`, the scope this call needs, which is the tool name when the case does not say
+
+The requested scope is `scope` and the granted scope is `granted`, the same two values the evidence record in section 1 carries. A call whose `scope` is not in `granted` is the delta that the control for threat 7 blocks. The control for threat 8 reads the destination from `arguments`.
+
+A guardrail that reads text only receives the call rendered as one line, `name({"argument": "value"})`, in the `output` field. The format does not carry the tool's description or schema, so threat 11 is still tested as `context` text (case I7). The built-in suite has no tool-call case yet.
+
 ## 5. What the guardrail does not cover
 
 - Model and training data supply chain (AML.T0010, AML.T0020). These belong to model selection and vendor review.
