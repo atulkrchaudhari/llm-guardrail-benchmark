@@ -73,7 +73,10 @@ def run_benchmark(adapters: list[Adapter], cases: list[Case]) -> list[AdapterRep
         languages: dict[str, list[int]] = {}
         for case in cases:
             start = time.perf_counter()
-            verdict = adapter.check(case.text, case.field)
+            if case.tool_call is not None:
+                verdict = adapter.check_tool_call(case.tool_call)
+            else:
+                verdict = adapter.check(case.text, case.field)
             report.latencies_ms.append((time.perf_counter() - start) * 1000)
 
             tally = counts.setdefault(case.category, [0, 0])

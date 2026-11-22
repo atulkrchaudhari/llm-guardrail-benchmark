@@ -36,11 +36,13 @@ def to_markdown(
 ) -> str:
     attacks = sum(c.block for c in cases)
     benign_total = sum(c.category == BENIGN for c in cases)
+    tool_calls = sum(c.tool_call is not None for c in cases)
     names = [r.name for r in reports]
     lines = [
         "# guardbench results",
         "",
         f"{len(cases)} cases: {attacks} attacks, {len(cases) - attacks} benign."
+        + (f" Tool calls: {tool_calls}." if tool_calls else "")
         + (f" Fields: {', '.join(fields)}." if fields else "")
         + (f" Languages: {', '.join(langs)}." if langs else ""),
         "",

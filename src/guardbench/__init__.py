@@ -4,7 +4,7 @@ from .adapters import REGISTRY, Adapter, Verdict
 from .evidence import EvidenceLog, verify_chain
 from .normalize import normalize
 from .runner import AdapterReport, run_benchmark
-from .suite import Case, load_suite
+from .suite import Case, ToolCall, load_suite
 
 __version__ = "0.1.0"
 
@@ -14,6 +14,7 @@ __all__ = [
     "AdapterReport",
     "Case",
     "EvidenceLog",
+    "ToolCall",
     "Verdict",
     "load_suite",
     "normalize",

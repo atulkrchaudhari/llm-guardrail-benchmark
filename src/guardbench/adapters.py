@@ -9,6 +9,11 @@ An adapter answers one question: should this text be blocked?
 * ``input``    what the user typed
 * ``context``  retrieved documents, tool output, memory. Untrusted data.
 * ``output``   what the model wants to send back or pass to a tool
+
+A case can also carry a structured tool call: the tool name, its arguments and
+the scopes the agent was granted. The runner hands those to
+``check_tool_call``. The default renders the call as one line of text and
+scores it as ``output``, so an adapter that reads text only needs no change.
 """
 
 from __future__ import annotations
@@ -19,6 +24,7 @@ from dataclasses import dataclass
 from typing import ClassVar, Literal
 
 from .normalize import normalize
+from .suite import ToolCall
 
 Field = Literal["input", "context", "output"]
 
@@ -40,6 +46,14 @@ class Adapter:
 
     def check(self, text: str, field: Field) -> Verdict:
         raise NotImplementedError
+
+    def check_tool_call(self, call: ToolCall) -> Verdict:
+        """Decide on a proposed tool call.
+
+        The default scores the rendered call as ``output`` text. Override it in
+        an adapter that reads the tool name, the arguments or the granted scopes.
+        """
+        return self.check(call.render(), "output")
 
 
 # ---------------------------------------------------------------- patterns
