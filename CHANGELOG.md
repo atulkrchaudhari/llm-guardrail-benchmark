@@ -35,6 +35,11 @@
 - README per-language table gains a German column. LLM Guard blocks four of six German attacks and two of four German benign cases. Prompt Guard 2 86M blocks three of six German attacks at threshold 0.5 and two at 0.9, and one German benign case (B21) at both, its first false positive on this suite. LlamaFirewall with PromptGuard blocks no German attack.
 - README records that the raw Prompt Guard 2 model now decides ten cases differently under transformers 4.57.6 than under 5.24.0; the German cases J6, I11 and B21 are the three new ones.
 - Cases can carry a structured tool call in place of `text`: `tool_call` with `name`, `arguments`, `granted` and an optional `scope`, always in the `output` field. The loader validates the row and renders the call as one line of text. The runner passes the call to the new `Adapter.check_tool_call`, which by default scores the rendered line as `output`, so existing adapters run unchanged. The Markdown report counts tool-call cases. The built-in suite has no tool-call case yet and no measured figure changes (refs #4).
+- Suite grows to 86 cases: six French attacks (direct injection D10, system prompt extraction S6, jailbreak J7, indirect injection I12, exfiltration E12 and E13) and four French benign look-alikes (B25 to B28), all tagged `fr` (refs #3).
+- CI block rate gate set to the measured baseline of 65%. `layered-guard` blocks 38 of 58 attacks on the larger suite, against 36 of 52 before; it misses four of the six French attacks.
+- The `--lang` error test names a tag that no planned suite language uses, so it does not depend on which languages the suite holds.
+- All published results re-measured on the 86-case suite on 23 November 2026: the built-in adapters, Presidio and LLM Guard 0.3.16 by the `Third-party guardrails` workflow, Prompt Guard 2 (86M and 22M) and both LlamaFirewall adapters by the `Prompt Guard 2` workflow.
+- README per-language table gains a French column. LLM Guard blocks five of six French attacks and three of four French benign cases. Prompt Guard 2 86M and 22M, `llamafirewall-static` and LlamaFirewall with PromptGuard block no French attack and no French benign case.
 
 ## 0.1.0
 
