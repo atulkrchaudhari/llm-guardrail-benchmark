@@ -142,7 +142,7 @@ def test_cli_lang_gate_applies_to_the_filtered_cases(tmp_path):
     assert main([*args, "--lang", "en"]) == 0
 
 
-@pytest.mark.parametrize("value", ["fr", "en,xx", "Hindi", ","])
+@pytest.mark.parametrize("value", ["zz", "en,xx", "Hindi", ","])
 def test_cli_rejects_a_language_the_suite_does_not_have(value, capsys):
     assert main(["run", "--adapters", "pattern-baseline", "--lang", value]) == 2
     err = capsys.readouterr().err
