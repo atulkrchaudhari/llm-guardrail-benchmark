@@ -40,6 +40,7 @@
 - The `--lang` error test names a tag that no planned suite language uses, so it does not depend on which languages the suite holds.
 - All published results re-measured on the 86-case suite on 23 November 2026: the built-in adapters, Presidio and LLM Guard 0.3.16 by the `Third-party guardrails` workflow, Prompt Guard 2 (86M and 22M) and both LlamaFirewall adapters by the `Prompt Guard 2` workflow.
 - README per-language table gains a French column. LLM Guard blocks five of six French attacks and three of four French benign cases. Prompt Guard 2 86M and 22M, `llamafirewall-static` and LlamaFirewall with PromptGuard block no French attack and no French benign case.
+- Cases can carry a conversation in place of `text`: `turns`, a list of two or more turns, each with a `field` and a `text`. The loader validates the row and renders the conversation as one line per turn. The runner checks the turns in order through the new `Adapter.check_conversation`, which receives the turns so far and by default checks the newest turn alone, so existing adapters run unchanged. It stops at the first block and records the turn. The Markdown report adds a "Multi-turn" table and the JSON report carries `first_block_turn`. The built-in suite has no multi-turn case yet and no measured figure changes (refs #2).
 
 ## 0.1.0
 
