@@ -73,16 +73,52 @@ def _tool_call(raw: object) -> ToolCall:
     return ToolCall(name=name, arguments=arguments, granted=tuple(granted), scope=scope)
 
 
+_TURN_KEYS = ("field", "text")
+
+
+@dataclass(frozen=True)
+class Turn:
+    """One step of a conversation: the field it arrives in and its text."""
+
+    field: str
+    text: str
+
+
+def render_turns(turns: tuple[Turn, ...]) -> str:
+    """The conversation as text, one line per turn, each line starting with its field."""
+    return "\n".join(f"{turn.field}: {turn.text}" for turn in turns)
+
+
+def _turns(raw: object) -> tuple[Turn, ...]:
+    if not isinstance(raw, list) or len(raw) < 2:
+        raise ValueError("'turns' must be a list of at least two turns")
+    turns = []
+    for position, item in enumerate(raw, start=1):
+        if not isinstance(item, dict):
+            raise ValueError(f"turn {position} must be an object")
+        unknown = sorted(set(item) - set(_TURN_KEYS))
+        if unknown:
+            raise ValueError(f"turn {position} has unknown key(s): {', '.join(unknown)}")
+        if item.get("field") not in FIELDS:
+            raise ValueError(f"turn {position} has unknown field {item.get('field')!r}")
+        if not isinstance(item.get("text"), str) or not item["text"]:
+            raise ValueError(f"turn {position} needs a non-empty 'text'")
+        turns.append(Turn(field=item["field"], text=item["text"]))
+    return tuple(turns)
+
+
 @dataclass(frozen=True)
 class Case:
     id: str
     category: str
     field: str
     block: bool
-    text: str = ""  # for a tool-call case, the call rendered as one line
+    # For a tool-call case, the call rendered as one line. For a multi-turn case, one line per turn.
+    text: str = ""
     atlas: str = ""
     lang: str = DEFAULT_LANG  # language of the text, "en" when the row does not say
     tool_call: ToolCall | None = None
+    turns: tuple[Turn, ...] = ()  # the conversation in order; empty for a single-turn case
 
 
 def load_suite(path: str | Path | None = None) -> list[Case]:
@@ -97,7 +133,17 @@ def load_suite(path: str | Path | None = None) -> list[Case]:
         if not line.strip():
             continue
         row = json.loads(line)
-        if "tool_call" in row:
+        if "turns" in row:
+            if "text" in row or "tool_call" in row:
+                raise ValueError(f"line {number}: a case has 'text', 'tool_call' or 'turns', only one of them")
+            try:
+                turns = _turns(row["turns"])
+            except ValueError as error:
+                raise ValueError(f"line {number}: {error}") from None
+            if row.get("field") not in {turn.field for turn in turns}:
+                raise ValueError(f"line {number}: 'field' of a 'turns' case must be the field of one of its turns")
+            row = {**row, "turns": turns, "text": render_turns(turns)}
+        elif "tool_call" in row:
             if "text" in row:
                 raise ValueError(f"line {number}: a case has 'text' or 'tool_call', not both")
             if row.get("field") != "output":
@@ -108,7 +154,7 @@ def load_suite(path: str | Path | None = None) -> list[Case]:
                 raise ValueError(f"line {number}: {error}") from None
             row = {**row, "tool_call": call, "text": call.render()}
         elif not isinstance(row.get("text"), str) or not row["text"]:
-            raise ValueError(f"line {number}: a case needs a non-empty 'text' or a 'tool_call'")
+            raise ValueError(f"line {number}: a case needs a non-empty 'text' or a 'tool_call' or 'turns'")
         case = Case(**row)
         if case.id in seen:
             raise ValueError(f"line {number}: duplicate case id {case.id!r}")

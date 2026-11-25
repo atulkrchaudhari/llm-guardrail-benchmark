@@ -14,6 +14,10 @@ A case can also carry a structured tool call: the tool name, its arguments and
 the scopes the agent was granted. The runner hands those to
 ``check_tool_call``. The default renders the call as one line of text and
 scores it as ``output``, so an adapter that reads text only needs no change.
+
+A multi-turn case is a conversation. The runner calls ``check_conversation``
+once per turn with the turns so far. The default checks the newest turn on
+its own, so an adapter that keeps no history also needs no change.
 """
 
 from __future__ import annotations
@@ -24,7 +28,7 @@ from dataclasses import dataclass
 from typing import ClassVar, Literal
 
 from .normalize import normalize
-from .suite import ToolCall
+from .suite import ToolCall, Turn
 
 Field = Literal["input", "context", "output"]
 
@@ -54,6 +58,15 @@ class Adapter:
         an adapter that reads the tool name, the arguments or the granted scopes.
         """
         return self.check(call.render(), "output")
+
+    def check_conversation(self, turns: tuple[Turn, ...]) -> Verdict:
+        """Decide on the newest turn of a conversation.
+
+        ``turns`` holds the conversation so far in order, and the turn to
+        decide on is the last one. The default checks that turn alone, by its
+        own field. Override it in an adapter that reads the earlier turns.
+        """
+        return self.check(turns[-1].text, turns[-1].field)
 
 
 # ---------------------------------------------------------------- patterns

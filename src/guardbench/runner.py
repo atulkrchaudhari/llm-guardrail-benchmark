@@ -19,6 +19,8 @@ class AdapterReport:
     latencies_ms: list[float] = field(default_factory=list)
     # language -> (attacks blocked, attacks, benign blocked, benign)
     by_language: dict[str, tuple[int, int, int, int]] = field(default_factory=dict)
+    # multi-turn case id -> the turn (counted from 1) at which the adapter first blocked
+    first_block_turn: dict[str, int] = field(default_factory=dict)
 
     @property
     def attacks_blocked(self) -> int:
@@ -61,6 +63,7 @@ class AdapterReport:
             },
             "missed": self.missed,
             "false_positives": self.false_positives,
+            "first_block_turn": self.first_block_turn,
         }
 
 
@@ -72,12 +75,22 @@ def run_benchmark(adapters: list[Adapter], cases: list[Case]) -> list[AdapterRep
         counts: dict[str, list[int]] = {}
         languages: dict[str, list[int]] = {}
         for case in cases:
-            start = time.perf_counter()
-            if case.tool_call is not None:
-                verdict = adapter.check_tool_call(case.tool_call)
+            if case.turns:
+                # One check per turn, in order. The conversation ends at the first block.
+                for number in range(1, len(case.turns) + 1):
+                    start = time.perf_counter()
+                    verdict = adapter.check_conversation(case.turns[:number])
+                    report.latencies_ms.append((time.perf_counter() - start) * 1000)
+                    if verdict.blocked:
+                        report.first_block_turn[case.id] = number
+                        break
             else:
-                verdict = adapter.check(case.text, case.field)
-            report.latencies_ms.append((time.perf_counter() - start) * 1000)
+                start = time.perf_counter()
+                if case.tool_call is not None:
+                    verdict = adapter.check_tool_call(case.tool_call)
+                else:
+                    verdict = adapter.check(case.text, case.field)
+                report.latencies_ms.append((time.perf_counter() - start) * 1000)
 
             tally = counts.setdefault(case.category, [0, 0])
             tally[1] += 1

@@ -37,12 +37,14 @@ def to_markdown(
     attacks = sum(c.block for c in cases)
     benign_total = sum(c.category == BENIGN for c in cases)
     tool_calls = sum(c.tool_call is not None for c in cases)
+    multi_turn = [c for c in cases if c.turns]
     names = [r.name for r in reports]
     lines = [
         "# guardbench results",
         "",
         f"{len(cases)} cases: {attacks} attacks, {len(cases) - attacks} benign."
         + (f" Tool calls: {tool_calls}." if tool_calls else "")
+        + (f" Multi-turn: {len(multi_turn)}." if multi_turn else "")
         + (f" Fields: {', '.join(fields)}." if fields else "")
         + (f" Languages: {', '.join(langs)}." if langs else ""),
         "",
@@ -86,6 +88,24 @@ def to_markdown(
                 ab, at, bb, bt = r.by_language.get(lang, (0, 0, 0, 0))
                 cells.append(f"{_cell(ab, at)}, {_cell(bb, bt)}")
             lines.append(f"| {lang} | " + " | ".join(cells) + " |")
+    if multi_turn:
+        lines += [
+            "",
+            "## Multi-turn",
+            "",
+            "The turn at which each guardrail first blocked. An attack that is blocked before its last turn"
+            " and a benign conversation that is blocked at any turn are both worth reading.",
+            "",
+            "| Case | Expected | Turns | " + " | ".join(names) + " |",
+            "|---|---|---|" + "---|" * len(names),
+        ]
+        for case in multi_turn:
+            cells = []
+            for r in reports:
+                turn = r.first_block_turn.get(case.id)
+                cells.append(f"turn {turn}" if turn else "not blocked")
+            expected = "block" if case.block else "allow"
+            lines.append(f"| {case.id} | {expected} | {len(case.turns)} | " + " | ".join(cells) + " |")
     if skipped:
         lines += ["", "## Not run", ""] + [f"- **{name}**: {why}" for name, why in skipped.items()]
     lines += ["", f"False positive rate is measured on {benign_total} benign cases."]
