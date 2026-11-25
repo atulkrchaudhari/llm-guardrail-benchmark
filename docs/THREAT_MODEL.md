@@ -66,6 +66,18 @@ The requested scope is `scope` and the granted scope is `granted`, the same two 
 
 A guardrail that reads text only receives the call rendered as one line, `name({"argument": "value"})`, in the `output` field. The format does not carry the tool's description or schema, so threat 11 is still tested as `context` text (case I7). The built-in suite has no tool-call case yet.
 
+### Multi-turn conversations in the benchmark
+
+Three residual risks in the table need more than one message to show: a jailbreak that looks benign at every turn (threat 3), instructions split across several chunks (threat 2) and poison that is only harmful in combination (threat 9). A `turns` case presents such a sequence to a guardrail. It carries the conversation in order, and each turn names the trust boundary it crosses:
+
+- `input`, a message from the user (boundary 1)
+- `context`, a retrieved document or a tool output (boundary 2)
+- `output`, a model response (boundary 3)
+
+The benchmark asks for a decision at every turn, as a guardrail service is asked in production, and passes the turns so far with each request. The conversation ends at the first block. The report records which turn that was, because a block on the last turn means the attack was stopped only once it was complete, and a block on an earlier harmless turn is a false positive that happens to fall inside an attack case.
+
+A guardrail that keeps no state is given each turn on its own. That is the baseline these cases measure against: what a per-message check sees of an attack that is spread over several messages. A turn holds text only, so a tool call inside a conversation is still tested as a single `tool_call` case. The built-in suite has no multi-turn case yet.
+
 ## 5. What the guardrail does not cover
 
 - Model and training data supply chain (AML.T0010, AML.T0020). These belong to model selection and vendor review.
