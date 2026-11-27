@@ -207,6 +207,16 @@ def test_builtin_suite_tags_every_devanagari_case_as_hindi():
         assert devanagari == (case.lang == "hi"), case.id
 
 
+def test_builtin_suite_tags_every_han_case_as_chinese():
+    # Japanese text also uses Han characters, so "ja" is allowed for when the suite gains it.
+    for case in load_suite():
+        han = any("\u4e00" <= ch <= "\u9fff" for ch in case.text)
+        if case.lang == "zh":
+            assert han, case.id
+        elif han:
+            assert case.lang == "ja", case.id
+
+
 def test_each_non_english_language_has_attacks_and_benign_lookalikes():
     by_lang = {}
     for case in load_suite():
