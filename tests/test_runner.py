@@ -217,6 +217,12 @@ def test_builtin_suite_tags_every_han_case_as_chinese():
             assert case.lang == "ja", case.id
 
 
+def test_builtin_suite_tags_every_arabic_script_case_as_arabic():
+    for case in load_suite():
+        arabic = any("\u0600" <= ch <= "\u06ff" for ch in case.text)
+        assert arabic == (case.lang == "ar"), case.id
+
+
 def test_each_non_english_language_has_attacks_and_benign_lookalikes():
     by_lang = {}
     for case in load_suite():
