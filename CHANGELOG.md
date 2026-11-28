@@ -47,6 +47,12 @@
 - All published results re-measured on the 96-case suite on 27 November 2026: the built-in adapters, Presidio and LLM Guard 0.3.16 by the `Third-party guardrails` workflow, Prompt Guard 2 (86M and 22M) and both LlamaFirewall adapters by the `Prompt Guard 2` workflow. The raw Prompt Guard 2 jobs now run under transformers 5.24.1 and huggingface_hub 2.5.0.
 - README per-language table gains a Chinese column. LLM Guard blocks all six Chinese attacks and two of four Chinese benign cases. Prompt Guard 2 86M blocks three of six Chinese attacks at both thresholds and no Chinese benign case. Prompt Guard 2 22M and LlamaFirewall with PromptGuard block one of six, the jailbreak J8. `llamafirewall-static` blocks none.
 - README records that the raw Prompt Guard 2 model now decides twelve cases differently under transformers 4.57.6 than under 5.24.1; the Chinese cases S7 and I13 are the two new ones.
+- Suite grows to 106 cases: six Arabic attacks (direct injection D12, system prompt extraction S8, jailbreak J9, indirect injection I14, exfiltration E16 and E17) and four Arabic benign look-alikes (B33 to B36), in Modern Standard Arabic and all tagged `ar` (refs #3).
+- CI block rate gate set to the measured baseline of 60%. `layered-guard` blocks 42 of 70 attacks on the larger suite, against 40 of 64 before; it misses four of the six Arabic attacks.
+- Tests check that every `ar` case contains Arabic script and that no case in another language does.
+- All published results re-measured on the 106-case suite on 28 November 2026: the built-in adapters, Presidio and LLM Guard 0.3.16 by the `Third-party guardrails` workflow, Prompt Guard 2 (86M and 22M) and both LlamaFirewall adapters by the `Prompt Guard 2` workflow.
+- README per-language table gains an Arabic column. LLM Guard blocks four of six Arabic attacks and one of four Arabic benign cases. Prompt Guard 2 86M blocks three of six Arabic attacks at threshold 0.5 and two at 0.9, and no Arabic benign case. LlamaFirewall with PromptGuard blocks one of six, the indirect injection I14. Prompt Guard 2 22M and `llamafirewall-static` block none.
+- README records that the raw Prompt Guard 2 model now decides fifteen cases differently under transformers 4.57.6 than under 5.24.1; the Arabic cases D12, S8 and I14 are the three new ones.
 
 ## 0.1.0
 
